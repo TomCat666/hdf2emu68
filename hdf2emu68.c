@@ -118,7 +118,7 @@ void createPartition(uint8_t *partition, uint8_t status, uint8_t type,
   part->sectors = sectors;
 }
 
-void createMBR(uint8_t *mbr, uint64_t partition2SizeMB) {
+void createMBR(uint8_t *mbr, uint64_t partition2SizeMB, uint64_t partition1SizeMB) {
   MBR *mbrData = (MBR *)mbr;
   memset(mbr, 0, SECTOR_SIZE);
 
@@ -126,9 +126,9 @@ void createMBR(uint8_t *mbr, uint64_t partition2SizeMB) {
 
   // Set up the partition table
   createPartition(mbr + 0x01BE, 0x80, 0x0C, 0x800,
-                  (64 * 1024 * 1024) / SECTOR_SIZE);
+                  (partition1SizeMB * 1024 * 1024) / SECTOR_SIZE);
   createPartition(mbr + 0x01CE, 0x00, 0x76,
-                  0x800 + (64 * 1024 * 1024) / SECTOR_SIZE,
+                  0x800 + (partition1SizeMB * 1024 * 1024) / SECTOR_SIZE,
                   (partition2SizeMB * 1024 * 1024) / SECTOR_SIZE);
 }
 
@@ -156,14 +156,15 @@ int main(int argc, char *argv[]) {
 
   printf("hdf2emu68  -  (c) Claude Schwarz 28.10.2023\n");
 
-  if (argc != 2) {
+  if (argc != 3) {
     printf("Creates a emu68 compatible SD image from an existing Amiga raw "
            "disk image\n");
     printf("\n");
-    printf("Usage: %s <source_image>\n", argv[0]);
+    printf("Usage: %s <source_image> <fat32size>\n", argv[0]);
     return 1;
   }
   char *sourceImage = argv[1];
+  uint64_t partition1SizeMB = atoi(argv[2]);
   char *outputImage = "emu68_converted.img";
 
   FILE *sourceFile = fopen(sourceImage, "rb");
@@ -194,7 +195,7 @@ int main(int argc, char *argv[]) {
 
   // Create the MBR and partitions
   printf("Create MBR\n");
-  createMBR(diskImage, partition2SizeMB);
+  createMBR(diskImage, partition2SizeMB, partition1SizeMB);
 
   // Write MBR
   printf("Write MBR\n");
@@ -213,7 +214,7 @@ int main(int argc, char *argv[]) {
           fwrite(diskImage, 1, SECTOR_SIZE, outputFile);
       }
   */
-  long startSector = 0x800 + (64 * 1024 * 1024) / SECTOR_SIZE;
+  long startSector = 0x800 + (partition1SizeMB * 1024 * 1024) / SECTOR_SIZE;
 
   printf("0x76 Partition start sector at: %ld\n", startSector);
 
