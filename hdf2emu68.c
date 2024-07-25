@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 #if __MINGW32__
 #include <sys/stat.h>
 #endif
@@ -86,7 +87,68 @@ typedef struct {
   uint32_t sectors;
 } PartitionEntry;
 
-void createFAT32(void) {
+
+void AddFat32Files(char * path)
+{ 
+    DIR *dir;
+    struct dirent *dp;
+    char * file_name;
+    dir = opendir(path);
+    struct stat sb;
+    char pp[1024];
+    char buffer[4096];
+    size_t read_size;
+    FILE * f;
+    FIL fsrc;
+    int w;
+
+    while ((dp=readdir(dir)) != NULL)
+    {
+        file_name = dp->d_name; 
+        sprintf(pp,"%s\\%s", path, dp->d_name);
+
+        if (stat(pp, &sb) == -1)
+        {
+            perror("stat");
+            return;
+        }
+        if ((sb.st_mode & S_IFMT) == S_IFDIR)
+        {
+            if (file_name[strlen(file_name)-1] != '.')
+            {
+                printf("DIR  \"%s\"\n",file_name);
+                FCHK(f_mkdir(file_name));
+                FCHK(f_chdir(file_name));
+                sprintf(pp, "%s\\%s", path, file_name);
+                AddFat32Files(pp);
+                FCHK(f_chdir(".."));
+            }
+        }
+        else 
+        {
+            printf("FILE \"%s\"\n",file_name);
+        
+            if (f=fopen(pp, "rb"))
+            {
+                FCHK(f_open(&fsrc, file_name, FA_CREATE_ALWAYS | FA_READ | FA_WRITE));
+                while ((read_size = fread(buffer, 1, sizeof(buffer), f)) > 0)
+                {
+                    FCHK(f_write(&fsrc, buffer, read_size, &w));
+                }
+                fclose(f);
+                FCHK(f_sync(&fsrc));
+                FCHK(f_close(&fsrc));
+            }
+            else
+            {
+                printf("ERROR - could not open file %s\n", pp);
+            }
+        }
+    }
+    closedir(dir);
+} 
+
+void createFAT32(char * path) {
   FATFS fs;
   FRESULT fr;
   FIL fsrc;
@@ -98,12 +160,20 @@ void createFAT32(void) {
   FCHK(f_mkfs("0:", &fmt_opt, fatfs_buffer, sizeof(fatfs_buffer)));
   FCHK(f_mount(&fs, "0:", 0));
   FCHK(f_setlabel("0:EMU68BOOT"));
-  FCHK(f_open(&fsrc, "README.TXT", FA_CREATE_ALWAYS | FA_READ | FA_WRITE));
-  FCHK(f_write(&fsrc,
+
+  if (path != NULL)
+  {
+    AddFat32Files(path);
+  }
+  else
+  {
+    FCHK(f_open(&fsrc, "README.TXT", FA_CREATE_ALWAYS | FA_READ | FA_WRITE));
+    FCHK(f_write(&fsrc,
                "Copy the EMU68 and Kickstart files into the root directory\n",
                59, &w));
-  FCHK(f_sync(&fsrc));
-  FCHK(f_close(&fsrc));
+    FCHK(f_sync(&fsrc));
+    FCHK(f_close(&fsrc));
+  }
   FCHK(f_unmount("0:"));
 }
 
@@ -154,17 +224,27 @@ void copyFileContent(FILE *source, FILE *destination, long long offset) {
 
 int main(int argc, char *argv[]) {
 
-  printf("hdf2emu68  -  (c) Claude Schwarz 28.10.2023\n");
+  uint64_t partition1SizeMB = 64;
+  char * fat32path = NULL;
 
-  if (argc != 3) {
+  printf("hdf2emu68  -  (c) Claude Schwarz 25.07.2024\n");
+
+  if (argc < 2) {
     printf("Creates a emu68 compatible SD image from an existing Amiga raw "
            "disk image\n");
     printf("\n");
-    printf("Usage: %s <source_image> <fat32size>\n", argv[0]);
+    printf("Usage: %s <source_image> [fat32_size] [fat32_files_path]\n", argv[0]);
     return 1;
   }
   char *sourceImage = argv[1];
-  uint64_t partition1SizeMB = atoi(argv[2]);
+  if (argc > 1)
+  {
+    partition1SizeMB = atoi(argv[2]);
+  }
+  if (argc > 2)
+  {
+    fat32path = argv[3];
+  }
   char *outputImage = "emu68_converted.img";
 
   FILE *sourceFile = fopen(sourceImage, "rb");
@@ -236,7 +316,7 @@ int main(int argc, char *argv[]) {
   fclose(sourceFile);
 
   printf("Format the FAT32 partition\n");
-  createFAT32();
+  createFAT32(fat32path);
   printf("Image creation finished\n");
 
   printf("\n");
