@@ -237,11 +237,11 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   char *sourceImage = argv[1];
-  if (argc > 1)
+  if (argc > 2)
   {
     partition1SizeMB = atoi(argv[2]);
   }
-  if (argc > 2)
+  if (argc > 3)
   {
     fat32path = argv[3];
   }
