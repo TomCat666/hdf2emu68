@@ -20,6 +20,8 @@
 PARTITION VolToPart[] = {{0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0},
                          {5, 0}, {6, 0}, {7, 0}, {8, 0}, {9, 0}};
 
+char * OutputFilename="emu68_converted.img";
+
 static const char *fatfs_error_to_string(FRESULT err) {
   switch (err) {
   case FR_OK:
@@ -226,6 +228,7 @@ int main(int argc, char *argv[]) {
 
   uint64_t partition1SizeMB = 64;
   char * fat32path = NULL;
+  char *sourceImage = NULL;
 
   printf("hdf2emu68  -  (c) Claude Schwarz 25.07.2024\n");
 
@@ -233,24 +236,43 @@ int main(int argc, char *argv[]) {
     printf("Creates a emu68 compatible SD image from an existing Amiga raw "
            "disk image\n");
     printf("\n");
-    printf("Usage: %s <source_image> [fat32_size] [fat32_files_path]\n", argv[0]);
+    printf("Usage: %s <source_image> [options]\n", argv[0]);
+    printf("   -fatsize x  x is in MB, higher than 32 (default: 64)\n");
+    printf("   -fatdir x   x is the path of files to write to fat partition\n");
+    printf("   -output x   x is the filename (with path) of output file\n");
     return 1;
   }
-  char *sourceImage = argv[1];
-  if (argc > 2)
+  for(j=1;j<argc;j++)
   {
-    partition1SizeMB = atoi(argv[2]);
-    if (partition1SizeMB < 33)
+    if (argv[j][0] == '-')
     {
-        partition1SizeMB = 33;
-        printf("Fat32 Partition Size forced to 33Mb\n");
+        if (stricmp("-fatsize", argv[j]) == 0)
+        {
+            j++;
+            partition1SizeMB = atoi(argv[j]);
+            if (partition1SizeMB < 33)
+            {
+                partition1SizeMB = 33;
+                printf("Fat32 Partition Size forced to 33Mb\n");
+            }
+        }
+        else if (stricmp("-fatdir", argv[j]) == 0)
+        {
+            j++;
+            fat32path = argv[j];
+        }
+        else if (stricmp("-output", argv[j]) == 0)
+        {
+            j++;
+            OutputFilename = argv[j];
+        }
+    }
+    else
+    {
+        sourceImage = argv[j];
     }
   }
-  if (argc > 3)
-  {
-    fat32path = argv[3];
-  }
-  char *outputImage = "emu68_converted.img";
+//  char *outputImage = "emu68_converted.img";
 
   FILE *sourceFile = fopen(sourceImage, "rb");
   if (sourceFile == NULL) {
@@ -270,7 +292,7 @@ int main(int argc, char *argv[]) {
 
   printf("Source Image Size: %ldMB\n", (long)partition2SizeMB);
 
-  FILE *outputFile = fopen(outputImage, "wb");
+  FILE *outputFile = fopen(OutputFilename, "wb");
   if (outputFile == NULL) {
     perror("Error opening output image");
     return 1;
@@ -309,7 +331,7 @@ int main(int argc, char *argv[]) {
 
 #if __MINGW32__
   struct __stat64 stout;
-  _stat64(outputImage, &stout);
+  _stat64(OutputFilename, &stout);
   uint64_t finalSizeMB = (stout.st_size / (1024 * 1024) + 1);
 #else
   fseek(outputFile, 0, SEEK_END);
