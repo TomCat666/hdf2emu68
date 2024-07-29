@@ -240,6 +240,11 @@ int main(int argc, char *argv[]) {
   if (argc > 2)
   {
     partition1SizeMB = atoi(argv[2]);
+    if (partition1SizeMB < 33)
+    {
+        partition1SizeMB = 33;
+        printf("Fat32 Partition Size forced to 33Mb\n");
+    }
   }
   if (argc > 3)
   {
