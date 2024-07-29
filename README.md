@@ -2,8 +2,11 @@
 Harddisk image converter tool for EMU68
 
 Usage: hdf2emu68 <source_image> [options]
+
 -fatsize x  x is in MB, higher than 32 (default: 64)
+
 -fatdir x   x is the path of files to write to fat partition
+
 -output x   x is the filename (with path) of output file
    
 On Windows you can just drag&drop your existing .HDF / disk image to the hdf2emu68.exe.
