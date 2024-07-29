@@ -6,7 +6,7 @@ Usage: hdf2emu68 <source_image> [fat32_size] [fat32_files_path]
 On Windows you can just drag&drop your existing .HDF / disk image to the hdf2emu68.exe.
 The resulting EMU68 compatible image will be named "emu68_converted.img"
 
-Optionally you can specify fat32 partition size (default is 64Mb).
+Optionally you can specify fat32 partition size (default is 64Mb). Minimum is 33Mb since lower than that does not work (will not boot on rPi).
 
 Also optionally you can fill the fat32 partition with files and directories from fat32_files_path.
 
