@@ -229,6 +229,7 @@ int main(int argc, char *argv[]) {
   uint64_t partition1SizeMB = 64;
   char * fat32path = NULL;
   char *sourceImage = NULL;
+  int j;
 
   printf("hdf2emu68  -  (c) Claude Schwarz 25.07.2024\n");
 
